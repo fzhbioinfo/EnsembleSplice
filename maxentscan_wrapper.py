@@ -194,7 +194,7 @@ def annotation_pseudo_vcf(parsed_args, process_num):
     with Pool(process_num) as pool:
         df_list_score = pool.map(score_partial, df_list)
     df_score = reduce(lambda x, y: x.append(y), df_list_score)
-    return df_score
+    df_score.to_csv(parsed_args.file_out, sep='\t', index=False)
 
 
 def score_vcf(records, results, annotation, reference):
@@ -279,8 +279,7 @@ def main():
     parsed_args = parser.parse_args()
     process_num = min(cpu_count(), parsed_args.processes)
     if parsed_args.format_in != 'vcf':
-        df_score = annotation_pseudo_vcf(parsed_args, process_num)
-        df_score.to_csv(parsed_args.file_out, sep='\t', index=False)
+        annotation_pseudo_vcf(parsed_args, process_num)
     else:
         annotation_vcf(parsed_args, process_num)
 
