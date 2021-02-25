@@ -17,7 +17,7 @@ import os
 ROOT = os.path.abspath(os.path.dirname(__file__))
 ANNOTATION = os.path.join(ROOT, 'annotation')
 VariantRecord = namedtuple('VariantRecord', ['chromosome', 'pos', 'ref', 'alt'])
-VariantAnnotation = namedtuple('VariantAnnotation', ['location', 'exon_nearby', 'exon_start', 'exon_end', 'strand'])
+VariantAnnotation = namedtuple('VariantAnnotation', ['location', 'exon_nearby', 'exon_start', 'exon_end', 'strand', 'gene'])
 
 
 class MaxEntScan:
@@ -29,7 +29,7 @@ class MaxEntScan:
 
     def mes_score(self, record):
         if not (record.ref in ['A', 'T', 'C', 'G', 'a', 't', 'c', 'g'] and record.alt in ['A', 'T', 'C', 'G', 'a', 't', 'c', 'g']):
-            return '.'
+            return '.|.|.|.|.'
         record_anno = MaxEntScan.variant_annotation(self.annotation, record, 0)
         seq_ss, seq_ss_mut, ss = '', '', ''
         if record_anno.location == 'exon':
@@ -43,29 +43,29 @@ class MaxEntScan:
                     seq_ss, seq_ss_mut, ss = MaxEntScan.reverse_exon_ss5(self.reference, record, record_anno.exon_start)
                 elif record.pos + 2 >= record_anno.exon_end:
                     seq_ss, seq_ss_mut, ss = MaxEntScan.reverse_exon_ss3(self.reference, record, record_anno.exon_end)
-            return MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)
+            return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
         else:
             record_anno = MaxEntScan.variant_annotation(self.annotation, record, -6)
             if record_anno.exon_nearby:
                 if record_anno.strand == '+':
                     seq_ss, seq_ss_mut, ss = MaxEntScan.forward_intron_ss5(self.reference, record, record_anno.exon_end)
-                    return MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)
+                    return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
             record_anno = MaxEntScan.variant_annotation(self.annotation, record, 20)
             if record_anno.exon_nearby:
                 if record_anno.strand == '+':
                     seq_ss, seq_ss_mut, ss = MaxEntScan.forward_intron_ss3(self.reference, record, record_anno.exon_start)
-                    return MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)
+                    return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
             record_anno = MaxEntScan.variant_annotation(self.annotation, record, 6)
             if record_anno.exon_nearby:
                 if record_anno.strand == '-':
                     seq_ss, seq_ss_mut, ss = MaxEntScan.reverse_intron_ss5(self.reference, record, record_anno.exon_start)
-                    return MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)
+                    return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
             record_anno = MaxEntScan.variant_annotation(self.annotation, record, -20)
             if record_anno.exon_nearby:
                 if record_anno.strand == '-':
                     seq_ss, seq_ss_mut, ss = MaxEntScan.reverse_intron_ss3(self.reference, record, record_anno.exon_end)
-                    return MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)
-            return MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)
+                    return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
+            return '|'.join(['.', '.', *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
 
     @staticmethod
     def variant_annotation(annotation, record, offset):
@@ -76,13 +76,15 @@ class MaxEntScan:
             exon_start = None
             exon_end = None
             strand = None
+            gene = None
         else:
             location = 'exon'
             exon_nearby = True
             exon_start = exon[1].values[0]
             exon_end = exon[2].values[0]
             strand = exon[3].values[0]
-        return VariantAnnotation(location, exon_nearby, exon_start, exon_end, strand)
+            gene = exon[4].values[0]
+        return VariantAnnotation(location, exon_nearby, exon_start, exon_end, strand, gene)
 
     @staticmethod
     def forward_exon_ss5(reference, record, exon_end):
@@ -143,17 +145,17 @@ class MaxEntScan:
     @staticmethod
     def score_ss_seq(matrix5, matrix3, seq_ss, seq_ss_mut, ss):
         if 'N' in seq_ss or 'N' in seq_ss_mut or 'n' in seq_ss or 'n' in seq_ss_mut:
-            return '.'
+            return '.', '.', '.'
         if ss == 'ss5':
             score_wt = score5(seq_ss, matrix=matrix5)
             score_mut = score5(seq_ss_mut, matrix=matrix5)
-            return (score_mut - score_wt) / score_wt
+            return str(round(score_wt, 3)), str(round(score_mut, 3)), str(round((score_mut - score_wt) / score_wt, 3))
         elif ss == 'ss3':
             score_wt = score3(seq_ss, matrix=matrix3)
             score_mut = score3(seq_ss_mut, matrix=matrix3)
-            return (score_mut - score_wt) / score_wt
+            return str(round(score_wt, 3)), str(round(score_mut, 3)), str(round((score_mut - score_wt) / score_wt, 3))
         else:
-            return '.'
+            return '.', '.', '.'
 
     @staticmethod
     def base_complement(dna_base):
@@ -178,9 +180,9 @@ def split_df(df, split_num):
 def score_pseudo_vcf(annotation, reference, format_in, df):
     mes = MaxEntScan(annotation, reference)
     if format_in == 'vcf-4cols':
-        df['MaxEntScan_Score'] = df.apply(lambda x: mes.mes_score(VariantRecord(x['#CHROM'], x['POS'], x['REF'], x['ALT'])), axis=1)
+        df['MaxEntScan'] = df.apply(lambda x: mes.mes_score(VariantRecord(x['#CHROM'], x['POS'], x['REF'], x['ALT'])), axis=1)
     else:
-        df['MaxEntScan_Score'] = df.apply(lambda x: mes.mes_score(VariantRecord(x['#Chr'], x['Stop'], x['Ref'], x['Call'])), axis=1)
+        df['MaxEntScan'] = df.apply(lambda x: mes.mes_score(VariantRecord(x['#Chr'], x['Stop'], x['Ref'], x['Call'])), axis=1)
     return df
 
 
@@ -207,7 +209,7 @@ def score_vcf(records, results, annotation, reference):
         if record != 'END':
             record_id, record_infos, record_score_list = record[0], record[1], list()
             for record_info in record_infos:
-                record_score_list.append(str(mes.mes_score(record_info)))
+                record_score_list.append(mes.mes_score(record_info))
             results.put((record_id, ','.join(record_score_list)))
         else:
             records.put('END')
@@ -226,7 +228,9 @@ def annotation_vcf(parsed_args, process_num):
         processes.append(p)
         p.start()
     vcf_reader = vcf.Reader(filename=parsed_args.file_in)
-    vcf_reader.infos['MaxEntScan_Score'] = VcfInfo('MaxEntScan_Score', vcf_field_counts['A'], 'String', 'MaxEntScan Score for VCF record alleles', version=None, source=None)
+    vcf_reader.infos['MaxEntScan'] = VcfInfo('MaxEntScan', vcf_field_counts['A'], 'String',
+                                             'MaxEntScan Score for VCF record alleles, related_score = (mut_score-wild_score)/wild_score Format: ALLELE|SYMBOL|wild_score|mut_score|related_score',
+                                             version=None, source=None)
     vcf_writer = vcf.Writer(open(parsed_args.file_out, 'w'), vcf_reader)
     while True:
         while not records.full() and not input_finished:
@@ -258,7 +262,7 @@ def annotation_vcf(parsed_args, process_num):
             if result != 'END':
                 record_id, record_score = result[0], result[1]
                 record_write = wait_records.pop(record_id)
-                record_write.add_info('MaxEntScan_Score', record_score)
+                record_write.add_info('MaxEntScan', record_score)
                 vcf_writer.write_record(record_write)
             else:
                 output_finished = True
