@@ -281,6 +281,10 @@ def main():
     parser.add_argument('--format_in', help='Input file format: vcf,vcf-4cols,bgianno', default='vcf-4cols', dest='format_in')
     parser.add_argument('-p', help='Process number', type=int, default=1, dest='processes')
     parsed_args = parser.parse_args()
+    if parsed_args.annotation not in ['GRCh37', 'GRCh38']:
+        raise Exception('Genome not recognized! Must be GRCh37 or GRCh38')
+    if parsed_args.format_in not in ['vcf', 'vcf-4cols', 'bgianno']:
+        raise Exception('Input file format not recognized! Must be vcf, vcf-4cols or bgianno')
     process_num = min(cpu_count(), parsed_args.processes)
     if parsed_args.format_in != 'vcf':
         annotation_pseudo_vcf(parsed_args, process_num)
