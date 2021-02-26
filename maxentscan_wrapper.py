@@ -29,7 +29,7 @@ class MaxEntScan:
 
     def mes_score(self, record):
         if not (record.ref in ['A', 'T', 'C', 'G', 'a', 't', 'c', 'g'] and record.alt in ['A', 'T', 'C', 'G', 'a', 't', 'c', 'g']):
-            return '.|.|.|.|.'
+            return record.alt + '|.|.|.|.'
         record_anno = MaxEntScan.variant_annotation(self.annotation, record, 0)
         seq_ss, seq_ss_mut, ss = '', '', ''
         if record_anno.location == 'exon':
@@ -43,29 +43,29 @@ class MaxEntScan:
                     seq_ss, seq_ss_mut, ss = MaxEntScan.reverse_exon_ss5(self.reference, record, record_anno.exon_start)
                 elif record.pos + 2 >= record_anno.exon_end:
                     seq_ss, seq_ss_mut, ss = MaxEntScan.reverse_exon_ss3(self.reference, record, record_anno.exon_end)
-            return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
+            return '|'.join([record.alt, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
         else:
             record_anno = MaxEntScan.variant_annotation(self.annotation, record, -6)
             if record_anno.exon_nearby:
                 if record_anno.strand == '+':
                     seq_ss, seq_ss_mut, ss = MaxEntScan.forward_intron_ss5(self.reference, record, record_anno.exon_end)
-                    return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
+                    return '|'.join([record.alt, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
             record_anno = MaxEntScan.variant_annotation(self.annotation, record, 20)
             if record_anno.exon_nearby:
                 if record_anno.strand == '+':
                     seq_ss, seq_ss_mut, ss = MaxEntScan.forward_intron_ss3(self.reference, record, record_anno.exon_start)
-                    return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
+                    return '|'.join([record.alt, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
             record_anno = MaxEntScan.variant_annotation(self.annotation, record, 6)
             if record_anno.exon_nearby:
                 if record_anno.strand == '-':
                     seq_ss, seq_ss_mut, ss = MaxEntScan.reverse_intron_ss5(self.reference, record, record_anno.exon_start)
-                    return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
+                    return '|'.join([record.alt, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
             record_anno = MaxEntScan.variant_annotation(self.annotation, record, -20)
             if record_anno.exon_nearby:
                 if record_anno.strand == '-':
                     seq_ss, seq_ss_mut, ss = MaxEntScan.reverse_intron_ss3(self.reference, record, record_anno.exon_end)
-                    return '|'.join([record.ref, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
-            return '|'.join(['.', '.', *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
+                    return '|'.join([record.alt, record_anno.gene, *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
+            return '|'.join([record.alt, '.', *MaxEntScan.score_ss_seq(self.matrix5, self.matrix3, seq_ss, seq_ss_mut, ss)])
 
     @staticmethod
     def variant_annotation(annotation, record, offset):
