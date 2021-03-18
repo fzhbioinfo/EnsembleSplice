@@ -74,7 +74,7 @@ def annotation_vcf(parsed_args, process_num):
         processes.append(p)
         p.start()
     vcf_reader = vcf.Reader(filename=parsed_args.file_in)
-    vcf_reader.infos['SpliecAI'] = VcfInfo('SpliecAI', vcf_field_counts['A'], 'String',
+    vcf_reader.infos['SpliceAI'] = VcfInfo('SpliceAI', vcf_field_counts['A'], 'String',
                                            'SpliceAIv1.3 variant annotation. These include delta scores (DS) and delta positions (DP) for '
                                            'acceptor gain (AG), acceptor loss (AL), donor gain (DG), and donor loss (DL). '
                                            'Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL', version=None, source=None)
@@ -109,7 +109,7 @@ def annotation_vcf(parsed_args, process_num):
             if result != 'END':
                 record_id, record_score = result[0], result[1]
                 record_write = wait_records.pop(record_id)
-                record_write.add_info('SpliecAI', record_score)
+                record_write.add_info('SpliceAI', record_score)
                 vcf_writer.write_record(record_write)
             else:
                 output_finished = True
